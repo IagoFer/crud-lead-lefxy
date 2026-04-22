@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Lead, LeadStage, PaginatedResult } from '@/types';
 import { Card } from '../ui/Card';
@@ -99,26 +100,28 @@ export function LeadPipeline() {
                       transition={{ type: "spring", stiffness: 100, damping: 20 }}
                       key={lead._id}
                     >
-                      <Card className="p-4 cursor-grab active:cursor-grabbing hover:border-primary/50 transition-premium group">
-                        <div className="flex flex-col gap-1">
-                          <h4 className="font-semibold text-sm truncate">{lead.name}</h4>
-                          <span className="text-xs text-foreground/50 font-mono tracking-tight">{lead.phone}</span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-surface-border">
-                          <span className="text-[10px] font-medium px-2 py-1 bg-surface-light rounded-md text-foreground/60 uppercase tracking-wider">
-                            {lead.channel}
-                          </span>
-                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-premium">
-                            <button className="text-foreground/40 hover:text-primary transition-premium">
-                              <Phone size={14} />
-                            </button>
-                            <button className="text-foreground/40 hover:text-primary transition-premium">
-                              <MessagesSquare size={14} />
-                            </button>
+                      <Link href={`/leads/${lead._id}`}>
+                        <Card className="p-4 cursor-pointer hover:border-primary/50 transition-premium group">
+                          <div className="flex flex-col gap-1">
+                            <h4 className="font-semibold text-sm truncate">{lead.name}</h4>
+                            <span className="text-xs text-foreground/50 font-mono tracking-tight">{lead.phone}</span>
                           </div>
-                        </div>
-                      </Card>
+                          
+                          <div className="flex items-center justify-between mt-4 pt-4 border-t border-surface-border">
+                            <span className="text-[10px] font-medium px-2 py-1 bg-surface-light rounded-md text-foreground/60 uppercase tracking-wider">
+                              {lead.channel}
+                            </span>
+                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-premium">
+                              <button className="text-foreground/40 hover:text-primary transition-premium">
+                                <Phone size={14} />
+                              </button>
+                              <button className="text-foreground/40 hover:text-primary transition-premium">
+                                <MessagesSquare size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        </Card>
+                      </Link>
                     </motion.div>
                   ))
                 )}
