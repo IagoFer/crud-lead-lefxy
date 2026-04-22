@@ -14,5 +14,6 @@ import { FollowUpsModule } from '../followups/followups.module';
   ],
   controllers: [InteractionsController],
   providers: [InteractionsService],
+  exports: [InteractionsService],
 })
 export class InteractionsModule {}

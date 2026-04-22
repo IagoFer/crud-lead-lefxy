@@ -8,6 +8,7 @@ import configuration from './config/configuration';
 import { LeadsModule } from './modules/leads/leads.module';
 import { InteractionsModule } from './modules/interactions/interactions.module';
 import { FollowUpsModule } from './modules/followups/followups.module';
+import { AiSummaryModule } from './modules/ai-summary/ai-summary.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { FollowUpsModule } from './modules/followups/followups.module';
     LeadsModule,
     FollowUpsModule,
     InteractionsModule,
+    AiSummaryModule,
   ],
 })
 export class AppModule {}
