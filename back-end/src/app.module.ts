@@ -5,6 +5,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { CacheModule } from '@nestjs/cache-manager';
 import { createKeyv } from '@keyv/redis';
 import configuration from './config/configuration';
+import { LeadsModule } from './modules/leads/leads.module';
 
 @Module({
   imports: [
@@ -33,6 +34,8 @@ import configuration from './config/configuration';
         };
       },
     }),
+
+    LeadsModule,
   ],
 })
 export class AppModule {}
