@@ -1,9 +1,11 @@
-import { Controller, Post, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Param, NotFoundException, UseGuards } from '@nestjs/common';
 import { AiSummaryService } from './ai-summary.service';
 import { LeadsService } from '../leads/leads.service';
 import { InteractionsService } from '../interactions/interactions.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('leads/:id/ai-summary')
+@UseGuards(JwtAuthGuard)
 export class AiSummaryController {
   constructor(
     private readonly aiSummaryService: AiSummaryService,

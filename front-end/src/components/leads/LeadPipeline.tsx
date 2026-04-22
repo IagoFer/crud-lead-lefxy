@@ -9,11 +9,12 @@ import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Search, Loader2, Plus, Phone, MessagesSquare } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { CreateLeadModal } from './CreateLeadModal';
 
 // Configura as colunas do Pipeline
 const STAGES: { id: LeadStage; title: string }[] = [
   { id: 'NEW', title: 'Novos' },
-  { id: 'CONTACTED', title: 'Contatados' },
+  { id: 'QUALIFIED', title: 'Qualificados' },
   { id: 'PROPOSAL', title: 'Proposta' },
   { id: 'WON', title: 'Ganhos' },
   { id: 'LOST', title: 'Perdidos' },
@@ -23,6 +24,7 @@ export function LeadPipeline() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchLeads = async (q = '') => {
     try {
@@ -66,11 +68,17 @@ export function LeadPipeline() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Button className="w-full md:w-auto">
+        <Button className="w-full md:w-auto" onClick={() => setIsModalOpen(true)}>
           <Plus size={18} className="mr-2" />
           Novo Lead
         </Button>
       </div>
+
+      <CreateLeadModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onLeadCreated={(newLead) => setLeads([newLead, ...leads])} 
+      />
 
       {/* Board */}
       <div className="flex gap-6 overflow-x-auto pb-8 snap-x">

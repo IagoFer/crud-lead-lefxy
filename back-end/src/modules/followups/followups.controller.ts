@@ -3,10 +3,13 @@ import {
   Get,
   Patch,
   Param,
+  UseGuards,
 } from '@nestjs/common';
 import { FollowUpsService } from './followups.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('followups')
+@UseGuards(JwtAuthGuard)
 export class FollowUpsController {
   constructor(private readonly followUpsService: FollowUpsService) {}
 

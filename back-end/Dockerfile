@@ -1,13 +1,25 @@
-FROM node:20-alpine
-
+FROM node:20-alpine AS base
 WORKDIR /app
 
-COPY package*.json ./
+# ---- Dependências ----
+FROM base AS deps
+COPY package.json package-lock.json* ./
 RUN npm ci
 
+# ---- Builder ----
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
+# ---- Produção ----
+FROM base AS runner
+ENV NODE_ENV=production
+
+COPY --from=builder /app/dist ./dist
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json ./
+
 EXPOSE 3001
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/main"]

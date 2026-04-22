@@ -9,6 +9,8 @@ import { LeadsModule } from './modules/leads/leads.module';
 import { InteractionsModule } from './modules/interactions/interactions.module';
 import { FollowUpsModule } from './modules/followups/followups.module';
 import { AiSummaryModule } from './modules/ai-summary/ai-summary.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { AiSummaryModule } from './modules/ai-summary/ai-summary.module';
     FollowUpsModule,
     InteractionsModule,
     AiSummaryModule,
+    AuthModule,
+    UsersModule,
   ],
 })
 export class AppModule {}

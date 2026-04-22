@@ -12,7 +12,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
     return (
       <div
         ref={ref}
-        className={`${glass ? glassStyle : defaultStyle} overflow-hidden ${className}`}
+        className={`${glass ? glassStyle : defaultStyle} ${className}`}
         {...props}
       >
         {children}

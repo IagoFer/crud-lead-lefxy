@@ -20,19 +20,11 @@ export class LeadsService {
 
   async create(createLeadDto: CreateLeadDto): Promise<LeadDocument> {
     const lead = new this.leadModel(createLeadDto);
-    const saved = await lead.save();
-    await this.invalidateCache();
-    return saved;
+    return await lead.save();
   }
 
   async findAll(filterDto: FilterLeadDto): Promise<PaginatedResult<LeadDocument>> {
     const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc', stage, channel, q } = filterDto;
-
-    const cacheKey = this.buildCacheKey(filterDto);
-    const cached = await this.cacheManager.get<PaginatedResult<LeadDocument>>(cacheKey);
-    if (cached) {
-      return cached;
-    }
 
     const filter: Record<string, unknown> = { deletedAt: null };
 
@@ -73,8 +65,6 @@ export class LeadsService {
       },
     };
 
-    await this.cacheManager.set(cacheKey, result, 60000);
-
     return result;
   }
 
@@ -99,7 +89,6 @@ export class LeadsService {
       throw new NotFoundException(`Lead com ID "${id}" não encontrado`);
     }
 
-    await this.invalidateCache();
     return lead;
   }
 
@@ -116,24 +105,7 @@ export class LeadsService {
       throw new NotFoundException(`Lead com ID "${id}" não encontrado`);
     }
 
-    await this.invalidateCache();
     return lead;
   }
 
-  private buildCacheKey(filterDto: FilterLeadDto): string {
-    const { page, limit, sortBy, sortOrder, stage, channel, q } = filterDto;
-    return `${this.CACHE_PREFIX}${stage || 'all'}:${channel || 'all'}:${q || ''}:${page}:${limit}:${sortBy}:${sortOrder}`;
-  }
-
-  private async invalidateCache(): Promise<void> {
-    try {
-      // Tenta limpar keys com prefixo de leads
-      const stores = this.cacheManager.stores;
-      if (stores && stores.length > 0) {
-        await stores[0].clear();
-      }
-    } catch {
-      // Fallback silencioso — cache expira naturalmente pelo TTL
-    }
-  }
 }

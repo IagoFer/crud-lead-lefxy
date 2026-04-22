@@ -1,4 +1,4 @@
-export type LeadStage = 'NEW' | 'CONTACTED' | 'PROPOSAL' | 'WON' | 'LOST';
+export type LeadStage = 'NEW' | 'QUALIFIED' | 'PROPOSAL' | 'WON' | 'LOST';
 
 export interface Lead {
   _id: string;

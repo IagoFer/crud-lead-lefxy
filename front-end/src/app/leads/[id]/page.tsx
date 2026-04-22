@@ -4,11 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { api } from '@/lib/api';
-import { Lead, Interaction } from '@/types';
+import { Lead, Interaction, LeadStage } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { ArrowLeft, Sparkles, Send, Loader2, UserCircle, Briefcase, Phone, AtSign, Clock } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
+import { EditLeadModal } from '@/components/leads/EditLeadModal';
+import { ArrowLeft, Sparkles, Send, Loader2, UserCircle, Briefcase, Phone, AtSign, Clock, MessagesSquare, Settings } from 'lucide-react';
 
 export default function LeadDetailsPage() {
   const params = useParams();
@@ -18,14 +20,18 @@ export default function LeadDetailsPage() {
   const [lead, setLead] = useState<Lead | null>(null);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // States para interação
   const [newInteraction, setNewInteraction] = useState('');
+  const [interactionType, setInteractionType] = useState<'MESSAGE' | 'CALL' | 'NOTE'>('MESSAGE');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // States para IA
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+
+  // States para edição
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     if (!leadId) return;
@@ -49,11 +55,11 @@ export default function LeadDetailsPage() {
   const handleCreateInteraction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newInteraction.trim()) return;
-    
+
     setIsSubmitting(true);
     try {
       const res = await api.post<Interaction>(`/leads/${leadId}/interactions`, {
-        type: 'MESSAGE',
+        type: interactionType,
         content: newInteraction
       });
       setInteractions([res.data, ...interactions]);
@@ -99,27 +105,42 @@ export default function LeadDetailsPage() {
     <>
       <Navbar />
       <main className="max-w-[1400px] w-full mx-auto px-6 py-12 flex flex-col md:flex-row gap-8 items-start">
-        
+
         {/* Left Column - Profile & AI */}
-        <div className="w-full md:w-1/3 flex flex-col gap-6 sticky top-24">
-          <button 
+        <div className="w-full md:w-1/3 flex flex-col gap-6 relative md:sticky md:top-24">
+          <button
             onClick={() => router.push('/')}
             className="flex items-center gap-2 text-foreground/50 hover:text-foreground transition-premium w-fit mb-2"
           >
             <ArrowLeft size={16} /> Voltar
           </button>
-          
+
           <Card className="p-8 flex flex-col gap-6" glass>
             <div className="flex items-center gap-4">
               <div className="size-16 rounded-full bg-surface-light border border-surface-border flex items-center justify-center text-foreground/40">
                 <UserCircle size={32} />
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col gap-2">
                 <h1 className="text-2xl font-bold tracking-tight">{lead.name}</h1>
-                <span className="text-sm font-medium text-primary-light uppercase tracking-wider">{lead.stage}</span>
+                <div className="w-40 z-20">
+                  <Select
+                    value={lead.stage}
+                    options={[
+                      { label: 'Novo', value: 'NEW' },
+                      { label: 'Qualificado', value: 'QUALIFIED' },
+                      { label: 'Proposta', value: 'PROPOSAL' },
+                      { label: 'Ganho', value: 'WON' },
+                      { label: 'Perdido', value: 'LOST' }
+                    ]}
+                    onChange={async (val) => {
+                      setLead({ ...lead, stage: val as LeadStage });
+                      await api.patch(`/leads/${leadId}`, { stage: val });
+                    }}
+                  />
+                </div>
               </div>
             </div>
-            
+
             <div className="flex flex-col gap-4 pt-4 border-t border-surface-border">
               <div className="flex items-center gap-3 text-foreground/70">
                 <Phone size={16} />
@@ -134,11 +155,20 @@ export default function LeadDetailsPage() {
                 <span className="text-sm">Canal: {lead.channel}</span>
               </div>
             </div>
+
+            <Button
+              variant="outline"
+              className="w-full mt-2"
+              onClick={() => setIsEditModalOpen(true)}
+            >
+              <Settings size={16} className="mr-2" />
+              Editar Informações
+            </Button>
           </Card>
 
-          <Card className="p-6 flex flex-col gap-4 relative overflow-hidden" glass>
+          <Card className="p-6 flex flex-col gap-4 relative" glass>
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl rounded-full pointer-events-none" />
-            
+
             <div className="flex flex-col gap-2 relative z-10">
               <h3 className="font-semibold flex items-center gap-2">
                 <Sparkles size={16} className="text-primary-light" />
@@ -148,18 +178,24 @@ export default function LeadDetailsPage() {
                 Analise todo o histórico de interações com o Google Gemini para extrair dor, contexto e próximos passos.
               </p>
             </div>
-            
+
             {!aiSummary ? (
-              <Button 
-                onClick={handleGenerateSummary} 
-                isLoading={isGeneratingAi} 
+              <Button
+                onClick={handleGenerateSummary}
+                isLoading={isGeneratingAi}
                 className="mt-2 w-full glass hover:border-primary-light border-surface-border transition-premium text-foreground hover:bg-surface-light"
               >
                 Gerar Relatório Inteligente
               </Button>
             ) : (
-              <div className="mt-4 p-4 rounded-xl bg-surface/50 border border-surface-border text-sm leading-relaxed text-foreground/80 whitespace-pre-wrap">
-                {aiSummary}
+              <div className="mt-4 p-4 rounded-xl bg-surface/50 border border-surface-border text-sm leading-relaxed text-foreground/80 space-y-3">
+                {aiSummary.split('\n').map((paragraph, index) => (
+                  paragraph.trim() ? (
+                    <p key={index} dangerouslySetInnerHTML={{
+                      __html: paragraph.replace(/\*\*(.*?)\*\*/g, '<strong class="text-foreground font-semibold">$1</strong>')
+                    }} />
+                  ) : null
+                ))}
               </div>
             )}
           </Card>
@@ -168,16 +204,27 @@ export default function LeadDetailsPage() {
         {/* Right Column - Interactions History */}
         <div className="w-full md:w-2/3 flex flex-col gap-6">
           <h2 className="text-xl font-semibold tracking-tight">Histórico de Interações</h2>
-          
-          <Card className="p-6" glass>
-            <form onSubmit={handleCreateInteraction} className="flex gap-3">
-              <Input 
-                placeholder="Registrar nova mensagem, call ou nota..." 
+
+          <Card className="p-4 md:p-6" glass>
+            <form onSubmit={handleCreateInteraction} className="flex flex-col md:flex-row gap-3">
+              <div className="w-full md:w-44 shrink-0">
+                <Select
+                  value={interactionType}
+                  options={[
+                    { label: 'Mensagem', value: 'MESSAGE' },
+                    { label: 'Call (Ligação)', value: 'CALL' },
+                    { label: 'Nota Interna', value: 'NOTE' }
+                  ]}
+                  onChange={(val) => setInteractionType(val as any)}
+                />
+              </div>
+              <Input
+                placeholder="Detalhes da interação..."
                 value={newInteraction}
                 onChange={(e) => setNewInteraction(e.target.value)}
                 className="flex-1"
               />
-              <Button type="submit" isLoading={isSubmitting} className="w-14 px-0 shrink-0">
+              <Button type="submit" isLoading={isSubmitting} className="h-12 w-full md:w-14 px-0 shrink-0">
                 {!isSubmitting && <Send size={18} />}
               </Button>
             </form>
@@ -198,7 +245,7 @@ export default function LeadDetailsPage() {
                     </div>
                     <div className="w-px h-full bg-surface-border/50 group-last:hidden" />
                   </div>
-                  
+
                   <Card className="flex-1 p-5 mb-4 group-hover:border-surface-border/80 transition-premium">
                     <div className="flex justify-between items-start mb-2">
                       <span className="text-xs font-medium px-2 py-1 bg-surface-light rounded-md text-foreground/60 uppercase tracking-wider">
@@ -219,8 +266,16 @@ export default function LeadDetailsPage() {
             )}
           </div>
         </div>
-
       </main>
+
+      {lead && (
+        <EditLeadModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          lead={lead}
+          onLeadUpdated={(updated) => setLead(updated)}
+        />
+      )}
     </>
   );
 }
