@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: lefxy-mongodb
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - lefxy-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: lefxy-redis
+    ports:
+      - '6379:6379'
+    networks:
+      - lefxy-network
+
+  backend:
+    build:
+      context: ./back-end
+      dockerfile: Dockerfile
+    container_name: lefxy-backend
+    ports:
+      - '3001:3001'
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/lefxy-crm
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PORT=3001
+      - FOLLOW_UP_DELAY_HOURS=24
+      - GEMINI_API_KEY=AIzaSyCj1KmgUBT5J17HXRhurrWm6gESHRwlj34
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - lefxy-network
+
+  frontend:
+    build:
+      context: ./front-end
+      dockerfile: Dockerfile
+    container_name: lefxy-frontend
+    ports:
+      - '3000:3000'
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    depends_on:
+      - backend
+    networks:
+      - lefxy-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  lefxy-network:
+    driver: bridge
