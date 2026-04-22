@@ -6,6 +6,8 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { createKeyv } from '@keyv/redis';
 import configuration from './config/configuration';
 import { LeadsModule } from './modules/leads/leads.module';
+import { InteractionsModule } from './modules/interactions/interactions.module';
+import { FollowUpsModule } from './modules/followups/followups.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { LeadsModule } from './modules/leads/leads.module';
     }),
 
     LeadsModule,
+    FollowUpsModule,
+    InteractionsModule,
   ],
 })
 export class AppModule {}
