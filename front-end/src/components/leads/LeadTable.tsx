@@ -6,6 +6,7 @@ import { Lead, PaginatedResult } from '@/types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Select } from '../ui/Select';
 import { Search, Loader2, ArrowUpDown, ChevronLeft, ChevronRight, Edit, Trash, Eye, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { EditLeadModal } from './EditLeadModal';
@@ -20,6 +21,12 @@ const STAGE_TRANSLATIONS: Record<string, string> = {
   LOST: 'Perdido',
 };
 
+const CHANNEL_TRANSLATIONS: Record<string, string> = {
+  WHATSAPP: 'WhatsApp',
+  INSTAGRAM: 'Instagram',
+  SITE: 'Site',
+};
+
 export function LeadTable() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +38,8 @@ export function LeadTable() {
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [filterStage, setFilterStage] = useState('');
+  const [filterChannel, setFilterChannel] = useState('');
 
   // Controle de Edição/Exclusão/Sucesso
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -46,9 +55,10 @@ export function LeadTable() {
   const fetchLeads = async () => {
     try {
       setLoading(true);
-      const res = await api.get<PaginatedResult<Lead>>(
-        `/leads?page=${page}&limit=${limit}&q=${search}&sortBy=${sortBy}&sortOrder=${sortOrder}`
-      );
+      let url = `/leads?page=${page}&limit=${limit}&q=${search}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+      if (filterStage) url += `&stage=${filterStage}`;
+      if (filterChannel) url += `&channel=${filterChannel}`;
+      const res = await api.get<PaginatedResult<Lead>>(url);
       setLeads(res.data.data);
       setTotalPages(res.data.meta.totalPages);
     } catch (error) {
@@ -63,7 +73,7 @@ export function LeadTable() {
       fetchLeads();
     }, 400); // Debounce
     return () => clearTimeout(timeoutId);
-  }, [search, page, limit, sortBy, sortOrder]);
+  }, [search, page, limit, sortBy, sortOrder, filterStage, filterChannel]);
 
   const toggleSort = (field: string) => {
     if (sortBy === field) {
@@ -106,12 +116,32 @@ export function LeadTable() {
     <>
       <Card className="flex flex-col overflow-hidden" glass>
         <div className="p-4 border-b border-surface-border flex flex-col md:flex-row items-center gap-4">
-          <div className="w-full md:w-96">
+          <div className="w-full md:flex-1">
             <Input
               placeholder="Buscar leads por nome ou telefone..."
               icon={<Search size={18} />}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="w-full md:w-44">
+            <Select
+              value={filterStage}
+              options={[
+                { label: 'Todos os Estágios', value: '' },
+                ...Object.entries(STAGE_TRANSLATIONS).map(([key, label]) => ({ label, value: key }))
+              ]}
+              onChange={(val) => { setFilterStage(val); setPage(1); }}
+            />
+          </div>
+          <div className="w-full md:w-44">
+            <Select
+              value={filterChannel}
+              options={[
+                { label: 'Todos os Canais', value: '' },
+                ...Object.entries(CHANNEL_TRANSLATIONS).map(([key, label]) => ({ label, value: key }))
+              ]}
+              onChange={(val) => { setFilterChannel(val); setPage(1); }}
             />
           </div>
         </div>
