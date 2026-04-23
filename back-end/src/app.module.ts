@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BullModule } from '@nestjs/bullmq';
@@ -11,6 +13,7 @@ import { FollowUpsModule } from './modules/followups/followups.module';
 import { AiSummaryModule } from './modules/ai-summary/ai-summary.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -18,6 +21,11 @@ import { UsersModule } from './modules/users/users.module';
       isGlobal: true,
       load: [configuration],
     }),
+
+    ThrottlerModule.forRoot([{
+      ttl: 60000, // 60 segundos
+      limit: 100, // 100 requests max por IP nesse tempo
+    }]),
 
     MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost:27017/lefxy-crm'),
 
@@ -46,6 +54,13 @@ import { UsersModule } from './modules/users/users.module';
     AiSummaryModule,
     AuthModule,
     UsersModule,
+    AdminModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

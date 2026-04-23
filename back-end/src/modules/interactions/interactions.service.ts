@@ -33,14 +33,30 @@ export class InteractionsService {
     return saved;
   }
 
-  async findByLeadId(leadId: string): Promise<InteractionDocument[]> {
+  async findByLeadId(leadId: string, page: number = 1, limit: number = 20) {
     // Valida que o lead existe
     await this.leadsService.findById(leadId);
 
-    return this.interactionModel
-      .find({ leadId: new Types.ObjectId(leadId) })
-      .sort({ createdAt: -1 })
-      .exec();
+    const filter = { leadId: new Types.ObjectId(leadId) };
+    const [data, total] = await Promise.all([
+      this.interactionModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .exec(),
+      this.interactionModel.countDocuments(filter).exec()
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      }
+    };
   }
 
   async findLastByLeadId(leadId: string, limit: number = 10): Promise<InteractionDocument[]> {

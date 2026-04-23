@@ -17,6 +17,9 @@ export class Interaction {
   @Prop({ required: true, enum: InteractionType })
   type: InteractionType;
 
+  @Prop({ required: true, enum: ['LEAD', 'USER'], default: 'USER' })
+  from: string;
+
   @Prop({ required: true, trim: true })
   content: string;
 

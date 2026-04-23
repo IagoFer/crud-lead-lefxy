@@ -14,29 +14,50 @@ export default function FollowUpsPage() {
   const [tasks, setTasks] = useState<FollowUp[]>([]);
   const [completedTasks, setCompletedTasks] = useState<FollowUp[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalTasks, setTotalTasks] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     fetchTasks();
   }, []);
 
-  const fetchTasks = async () => {
+  const fetchTasks = async (resetPage = 1) => {
     try {
-      setLoading(true);
-      const res = await api.get<FollowUp[]>('/followups/pending');
-      setTasks(res.data);
+      if (resetPage === 1) setLoading(true);
+      else setLoadingMore(true);
+
+      const res = await api.get<{ data: FollowUp[], meta: any }>(`/followups/pending?page=${resetPage}&limit=10`);
+
+      if (resetPage === 1) {
+        setTasks(res.data.data);
+      } else {
+        setTasks(prev => [...prev, ...res.data.data]);
+      }
+
+      setTotalTasks(res.data.meta.total);
+      setHasMore(res.data.meta.page < res.data.meta.totalPages);
+      setPage(res.data.meta.page);
     } catch (error) {
       console.error('Erro ao buscar tarefas:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (hasMore && !loadingMore) {
+      fetchTasks(page + 1);
     }
   };
 
   const handleCompleteTask = async (task: FollowUp) => {
     try {
-      // Otimista (UX instantânea)
       setTasks((prev) => prev.filter((t) => t._id !== task._id));
       setCompletedTasks((prev) => [task, ...prev]);
-      await api.patch(`/followups/${task._id}/complete`);
+      await api.patch(`/followups/${task._id}`, { status: 'COMPLETED' });
     } catch (error) {
       console.error('Erro ao concluir tarefa:', error);
       fetchTasks();
@@ -58,7 +79,7 @@ export default function FollowUpsPage() {
             </p>
           </div>
           <div className="hidden md:flex flex-col items-end">
-            <span className="text-2xl font-bold text-foreground">{tasks.length}</span>
+            <span className="text-2xl font-bold text-foreground">{totalTasks}</span>
             <span className="text-xs uppercase tracking-wider text-foreground/50 font-medium">Pendentes</span>
           </div>
         </div>
@@ -93,12 +114,12 @@ export default function FollowUpsPage() {
                     transition={{ type: "spring", stiffness: 100, damping: 20 }}
                   >
                     <Card className="p-6 flex flex-col md:flex-row items-center justify-between gap-6 group hover:border-primary/50 transition-premium" glass>
-                      
+
                       <div className="flex items-center gap-4 w-full md:w-auto">
                         <div className="size-12 rounded-2xl bg-surface border border-surface-border flex items-center justify-center shrink-0">
                           <Phone size={20} className="text-primary-light" />
                         </div>
-                        
+
                         <div className="flex flex-col gap-1">
                           <h4 className="font-semibold text-lg flex gap-2 items-center">
                             {lead.name || 'Lead Excluído'}
@@ -119,7 +140,7 @@ export default function FollowUpsPage() {
                             {new Date(task.dueAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                           </span>
                         </div>
-                        
+
                         <div className="flex gap-3">
                           <Link href={lead._id ? `/leads/${lead._id}` : '#'}>
                             <Button variant="secondary" size="sm">Ver Perfil</Button>
@@ -135,6 +156,19 @@ export default function FollowUpsPage() {
                 );
               })}
             </AnimatePresence>
+
+            {hasMore && (
+              <div className="mt-8 flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={handleLoadMore}
+                  isLoading={loadingMore}
+                  className="px-8"
+                >
+                  Carregar mais tarefas
+                </Button>
+              </div>
+            )}
 
             {completedTasks.length > 0 && (
               <div className="mt-12">

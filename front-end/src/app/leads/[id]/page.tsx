@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { EditLeadModal } from '@/components/leads/EditLeadModal';
-import { ArrowLeft, Sparkles, Send, Loader2, UserCircle, Briefcase, Phone, AtSign, Clock, MessagesSquare, Settings } from 'lucide-react';
+import { ArrowLeft, Sparkles, Send, Loader2, UserCircle, Briefcase, Phone, AtSign, Clock, MessagesSquare, Settings, CheckCircle2 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export default function LeadDetailsPage() {
   const params = useParams();
@@ -20,18 +21,28 @@ export default function LeadDetailsPage() {
   const [lead, setLead] = useState<Lead | null>(null);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [interPage, setInterPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // States para interação
   const [newInteraction, setNewInteraction] = useState('');
   const [interactionType, setInteractionType] = useState<'MESSAGE' | 'CALL' | 'NOTE'>('MESSAGE');
+  const [interactionFrom, setInteractionFrom] = useState<'LEAD' | 'USER'>('USER');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // States para IA
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
-  // States para edição
+  // States para edição/sucesso
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const showSuccess = (msg: string) => {
+    setSuccessMessage(msg);
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
 
   useEffect(() => {
     if (!leadId) return;
@@ -39,10 +50,11 @@ export default function LeadDetailsPage() {
       try {
         const [leadRes, interactionsRes] = await Promise.all([
           api.get<Lead>(`/leads/${leadId}`),
-          api.get<Interaction[]>(`/leads/${leadId}/interactions`)
+          api.get<{ data: Interaction[], meta: any }>(`/leads/${leadId}/interactions?page=1&limit=10`)
         ]);
         setLead(leadRes.data);
-        setInteractions(interactionsRes.data);
+        setInteractions(interactionsRes.data.data);
+        setHasNextPage(interactionsRes.data.meta.page < interactionsRes.data.meta.totalPages);
       } catch (error) {
         console.error('Erro ao buscar detalhes:', error);
       } finally {
@@ -52,6 +64,22 @@ export default function LeadDetailsPage() {
     fetchData();
   }, [leadId]);
 
+  const handleLoadMore = async () => {
+    if (!hasNextPage || isLoadingMore) return;
+    setIsLoadingMore(true);
+    try {
+      const nextPage = interPage + 1;
+      const res = await api.get<{ data: Interaction[], meta: any }>(`/leads/${leadId}/interactions?page=${nextPage}&limit=10`);
+      setInteractions((prev) => [...prev, ...res.data.data]);
+      setInterPage(nextPage);
+      setHasNextPage(res.data.meta.page < res.data.meta.totalPages);
+    } catch (error) {
+      console.error('Erro ao buscar mais interações:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
   const handleCreateInteraction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newInteraction.trim()) return;
@@ -60,6 +88,7 @@ export default function LeadDetailsPage() {
     try {
       const res = await api.post<Interaction>(`/leads/${leadId}/interactions`, {
         type: interactionType,
+        from: interactionFrom,
         content: newInteraction
       });
       setInteractions([res.data, ...interactions]);
@@ -147,10 +176,6 @@ export default function LeadDetailsPage() {
                 <span className="font-mono text-sm">{lead.phone}</span>
               </div>
               <div className="flex items-center gap-3 text-foreground/70">
-                <AtSign size={16} />
-                <span className="text-sm">{lead.email || 'Nenhum email cadastrado'}</span>
-              </div>
-              <div className="flex items-center gap-3 text-foreground/70">
                 <Briefcase size={16} />
                 <span className="text-sm">Canal: {lead.channel}</span>
               </div>
@@ -205,66 +230,119 @@ export default function LeadDetailsPage() {
         <div className="w-full md:w-2/3 flex flex-col gap-6">
           <h2 className="text-xl font-semibold tracking-tight">Histórico de Interações</h2>
 
-          <Card className="p-4 md:p-6" glass>
-            <form onSubmit={handleCreateInteraction} className="flex flex-col md:flex-row gap-3">
-              <div className="w-full md:w-44 shrink-0">
-                <Select
-                  value={interactionType}
-                  options={[
-                    { label: 'Mensagem', value: 'MESSAGE' },
-                    { label: 'Call (Ligação)', value: 'CALL' },
-                    { label: 'Nota Interna', value: 'NOTE' }
-                  ]}
-                  onChange={(val) => setInteractionType(val as any)}
-                />
+          <Card className="p-4 md:p-6 relative z-20" glass>
+            <form onSubmit={handleCreateInteraction} className="flex flex-col gap-4">
+              <div className="flex flex-col md:flex-row md:items-end gap-3">
+                <div className="w-full md:w-40 shrink-0">
+                  <Select
+                    label="Remetente"
+                    value={interactionFrom}
+                    options={[
+                      { label: 'Consultor', value: 'USER' },
+                      { label: 'Cliente', value: 'LEAD' }
+                    ]}
+                    onChange={(val) => setInteractionFrom(val as any)}
+                  />
+                </div>
+                <div className="w-full md:w-48 shrink-0">
+                  <Select
+                    label="Tipo"
+                    value={interactionType}
+                    options={[
+                      { label: 'Mensagem', value: 'MESSAGE' },
+                      { label: 'Call (Ligação)', value: 'CALL' },
+                      { label: 'Nota Interna', value: 'NOTE' }
+                    ]}
+                    onChange={(val) => setInteractionType(val as any)}
+                  />
+                </div>
+                <div className="flex-1 flex flex-col gap-2 min-w-0">
+                  <div className="flex items-end gap-2 w-full">
+                    <Input
+                      label="Conteúdo"
+                      placeholder="Detalhes da interação..."
+                      value={newInteraction}
+                      onChange={(e) => setNewInteraction(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button type="submit" isLoading={isSubmitting} className="h-12 w-14 shrink-0 mb-0">
+                      {!isSubmitting && <Send size={18} />}
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <Input
-                placeholder="Detalhes da interação..."
-                value={newInteraction}
-                onChange={(e) => setNewInteraction(e.target.value)}
-                className="flex-1"
-              />
-              <Button type="submit" isLoading={isSubmitting} className="h-12 w-full md:w-14 px-0 shrink-0">
-                {!isSubmitting && <Send size={18} />}
-              </Button>
             </form>
           </Card>
 
-          <div className="flex flex-col gap-4 mt-4">
-            {interactions.length === 0 ? (
-              <div className="py-12 text-center flex flex-col items-center justify-center border border-dashed border-surface-border rounded-3xl shrink-0">
-                <MessagesSquare className="text-foreground/20 mb-4" size={32} />
-                <p className="text-foreground/50">Nenhuma interação registrada ainda.</p>
-              </div>
-            ) : (
-              interactions.map((interaction) => (
-                <div key={interaction._id} className="flex gap-4 group">
-                  <div className="flex flex-col items-center gap-2 pt-1">
-                    <div className="size-10 rounded-full bg-surface border border-surface-border flex items-center justify-center shrink-0 group-hover:border-primary/50 transition-premium">
-                      <Clock size={14} className="text-foreground/40 group-hover:text-primary transition-premium" />
-                    </div>
-                    <div className="w-px h-full bg-surface-border/50 group-last:hidden" />
-                  </div>
-
-                  <Card className="flex-1 p-5 mb-4 group-hover:border-surface-border/80 transition-premium">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-xs font-medium px-2 py-1 bg-surface-light rounded-md text-foreground/60 uppercase tracking-wider">
-                        {interaction.type}
-                      </span>
-                      <span className="text-xs text-foreground/40 font-mono">
-                        {new Date(interaction.createdAt).toLocaleDateString('pt-BR', {
-                          hour: '2-digit', minute: '2-digit'
-                        })}
-                      </span>
-                    </div>
-                    <p className="text-foreground/80 leading-relaxed text-sm">
-                      {interaction.content}
-                    </p>
-                  </Card>
+          <Card className="p-8 flex flex-col h-[800px]" glass>
+            {/* Listagem de mensagens */}
+            <div className="flex-1 overflow-y-auto pr-2 space-y-6 custom-scrollbar relative">
+              {interactions.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-foreground/40 gap-4">
+                  <MessagesSquare size={48} className="opacity-20" />
+                  <p>Nenhuma interação registrada ainda.</p>
                 </div>
-              ))
-            )}
-          </div>
+              ) : (
+                <>
+                  {interactions.map((interaction) => (
+                    <div key={interaction._id} className="flex gap-4 group">
+                      <div className="flex flex-col items-center gap-2 pt-1">
+                        <div className="size-10 rounded-full bg-surface border border-surface-border flex items-center justify-center shrink-0 group-hover:border-primary/50 transition-premium">
+                          <Clock size={14} className="text-foreground/40 group-hover:text-primary transition-premium" />
+                        </div>
+                        <div className="w-px h-full bg-surface-border/50 group-last:hidden" />
+                      </div>
+
+                      <Card
+                        className={`flex-1 p-5 mb-4 group-hover:border-surface-border/80 transition-premium ${(interaction as any).from === 'LEAD'
+                            ? 'border-l-4 border-l-primary/50 bg-primary/5'
+                            : 'border-l-4 border-l-foreground/20'
+                          }`}
+                        glass
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex gap-2 items-center">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${(interaction as any).from === 'LEAD'
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-foreground/10 text-foreground/60'
+                              }`}>
+                              {(interaction as any).from === 'LEAD' ? 'Cliente' : 'Consultor'}
+                            </span>
+                            <span className="text-[10px] font-medium px-2 py-0.5 bg-surface-light rounded-md text-foreground/40 uppercase tracking-widest">
+                              {interaction.type}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-foreground/40 font-mono">
+                            {new Date(interaction.createdAt).toLocaleDateString('pt-BR', {
+                              hour: '2-digit', minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                        <p className="text-foreground/80 leading-relaxed text-sm">
+                          {interaction.content}
+                        </p>
+                      </Card>
+                    </div>
+                  ))}
+
+                  {/* Botão de carregar mais antigas */}
+                  {hasNextPage && (
+                    <div className="flex justify-center pt-8 pb-4 z-10 relative border-t border-surface-border/30">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleLoadMore}
+                        isLoading={isLoadingMore}
+                        className="rounded-full bg-surface-light border border-surface-border text-xs px-8 py-2.5 shadow-lg hover:border-primary/50 transition-premium"
+                      >
+                        Carregar mensagens anteriores
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </Card>
         </div>
       </main>
 
@@ -273,9 +351,27 @@ export default function LeadDetailsPage() {
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
           lead={lead}
-          onLeadUpdated={(updated) => setLead(updated)}
+          onLeadUpdated={(updated) => {
+            setLead(updated);
+            showSuccess('Lead atualizado com sucesso!');
+          }}
         />
       )}
+
+      {/* Notificação de Sucesso */}
+      <AnimatePresence>
+        {successMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, x: 20 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed top-24 right-8 z-[100] flex items-center gap-3 bg-emerald-500 text-white px-6 py-4 rounded-2xl shadow-2xl shadow-emerald-500/20 font-bold border border-white/10 backdrop-blur-md"
+          >
+            <CheckCircle2 className="size-5" />
+            {successMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

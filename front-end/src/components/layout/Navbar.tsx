@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Scale, LogOut, Bell, Menu, X } from 'lucide-react';
+import { Scale, LogOut, Bell, Menu, X, Terminal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '../ui/Button';
@@ -19,17 +19,20 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full glass border-b border-surface-border">
       <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="size-8 rounded-lg bg-gradient-glow flex items-center justify-center text-white shadow-lg shadow-primary/20">
-            <Scale size={18} />
+        <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-premium">
+          <div className="size-9 rounded-xl bg-primary border border-primary-light/30 flex items-center justify-center text-white shadow-2xl">
+            <Scale size={20} />
           </div>
-          <span className="font-bold text-lg tracking-tight">LEFXY</span>
-        </div>
+          <span className="font-bold text-xl tracking-tight text-foreground">LEFXY</span>
+        </Link>
 
         {/* Desktop Navbar */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-foreground/70">
           <Link href="/" className="hover:text-foreground hover:bg-surface-light px-3 py-1.5 rounded-lg transition-premium">Pipeline</Link>
           <Link href="/follow-ups" className="hover:text-foreground hover:bg-surface-light px-3 py-1.5 rounded-lg transition-premium">Tarefas Próximas</Link>
+          <Link href="/admin/logs" className="hover:text-foreground hover:bg-surface-light px-3 py-1.5 rounded-lg transition-premium flex items-center gap-2">
+            <Terminal size={14} /> Sistema
+          </Link>
         </nav>
 
         <div className="flex items-center gap-4">
@@ -66,6 +69,9 @@ export function Navbar() {
           </Link>
           <Link href="/follow-ups" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 bg-surface hover:bg-surface-light rounded-xl font-medium transition-premium">
             Tarefas Próximas
+          </Link>
+          <Link href="/admin/logs" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3 bg-surface hover:bg-surface-light rounded-xl font-medium transition-premium flex items-center gap-2">
+            <Terminal size={18} /> Sistema (Logs)
           </Link>
           <div className="h-px bg-surface-border my-2" />
           <Button 

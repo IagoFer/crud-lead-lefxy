@@ -69,10 +69,22 @@ export class LeadsService {
   }
 
   async findById(id: string): Promise<LeadDocument> {
+    const cacheKey = `${this.CACHE_PREFIX}${id}`;
+    
+    // Tenta buscar do cache primeiro
+    const cachedLead = await this.cacheManager.get<LeadDocument>(cacheKey);
+    if (cachedLead) {
+      return cachedLead;
+    }
+
     const lead = await this.leadModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!lead) {
       throw new NotFoundException(`Lead com ID "${id}" não encontrado`);
     }
+
+    // Salva no cache
+    await this.cacheManager.set(cacheKey, lead);
+
     return lead;
   }
 
@@ -89,6 +101,9 @@ export class LeadsService {
       throw new NotFoundException(`Lead com ID "${id}" não encontrado`);
     }
 
+    const cacheKey = `${this.CACHE_PREFIX}${id}`;
+    await this.cacheManager.del(cacheKey);
+
     return lead;
   }
 
@@ -104,6 +119,9 @@ export class LeadsService {
     if (!lead) {
       throw new NotFoundException(`Lead com ID "${id}" não encontrado`);
     }
+
+    const cacheKey = `${this.CACHE_PREFIX}${id}`;
+    await this.cacheManager.del(cacheKey);
 
     return lead;
   }

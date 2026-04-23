@@ -16,6 +16,7 @@ import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { FilterLeadDto } from './dto/filter-lead.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ParseObjectIdPipe } from '../../common/pipes/parse-objectid.pipe';
 
 @Controller('leads')
 @UseGuards(JwtAuthGuard)
@@ -34,18 +35,18 @@ export class LeadsController {
   }
 
   @Get(':id')
-  findById(@Param('id') id: string) {
+  findById(@Param('id', ParseObjectIdPipe) id: string) {
     return this.leadsService.findById(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateLeadDto: UpdateLeadDto) {
+  update(@Param('id', ParseObjectIdPipe) id: string, @Body() updateLeadDto: UpdateLeadDto) {
     return this.leadsService.update(id, updateLeadDto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  softDelete(@Param('id') id: string) {
+  softDelete(@Param('id', ParseObjectIdPipe) id: string) {
     return this.leadsService.softDelete(id);
   }
 }

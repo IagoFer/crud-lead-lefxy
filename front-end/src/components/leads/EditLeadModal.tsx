@@ -7,6 +7,7 @@ import { Button } from '../ui/Button';
 import { Select } from '../ui/Select';
 import { api } from '@/lib/api';
 import { Lead } from '@/types';
+import { maskPhone, validatePhone } from '@/lib/utils';
 
 interface EditLeadModalProps {
   isOpen: boolean;
@@ -17,7 +18,7 @@ interface EditLeadModalProps {
 
 export function EditLeadModal({ isOpen, onClose, lead, onLeadUpdated }: EditLeadModalProps) {
   const [name, setName] = useState(lead.name);
-  const [phone, setPhone] = useState(lead.phone);
+  const [phone, setPhone] = useState(maskPhone(lead.phone));
   const [channel, setChannel] = useState(lead.channel);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -25,7 +26,7 @@ export function EditLeadModal({ isOpen, onClose, lead, onLeadUpdated }: EditLead
   // Sincroniza dados se a lead mudar externamente
   useEffect(() => {
     setName(lead.name);
-    setPhone(lead.phone);
+    setPhone(maskPhone(lead.phone));
     setChannel(lead.channel);
   }, [lead]);
 
@@ -36,11 +37,16 @@ export function EditLeadModal({ isOpen, onClose, lead, onLeadUpdated }: EditLead
       return;
     }
 
+    if (!validatePhone(phone)) {
+      setError('Telefone inválido. Use (XX) 9XXXX-XXXX');
+      return;
+    }
+
     setIsSubmitting(true);
     setError('');
 
     try {
-      const res = await api.patch<Lead>(`/leads/${lead._id}`, { name, phone, channel });
+      const res = await api.patch<Lead>(`/leads/${lead._id}`, { name, phone: phone.replace(/\D/g, ''), channel });
       onLeadUpdated(res.data);
       onClose();
     } catch (err) {
@@ -92,7 +98,7 @@ export function EditLeadModal({ isOpen, onClose, lead, onLeadUpdated }: EditLead
                     label="Telefone / WhatsApp"
                     placeholder="(11) 99999-9999"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => setPhone(maskPhone(e.target.value))}
                   />
 
                   <div className="w-full md:w-1/3">

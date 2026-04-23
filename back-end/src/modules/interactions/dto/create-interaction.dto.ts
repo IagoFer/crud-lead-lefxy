@@ -9,4 +9,7 @@ export class CreateInteractionDto {
   @IsNotEmpty({ message: 'O conteúdo é obrigatório' })
   @IsString()
   content: string;
+
+  @IsEnum(['LEAD', 'USER'], { message: 'Origem deve ser LEAD ou USER' })
+  from?: string;
 }

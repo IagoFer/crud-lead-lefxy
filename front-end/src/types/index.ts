@@ -25,6 +25,7 @@ export interface Interaction {
   _id: string;
   leadId: string;
   type: 'MESSAGE' | 'CALL' | 'NOTE';
+  from: 'LEAD' | 'USER';
   content: string;
   createdAt: string;
 }

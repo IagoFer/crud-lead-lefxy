@@ -40,7 +40,7 @@ export class AiSummaryService {
 
   private buildPrompt(lead: LeadDocument, interactions: InteractionDocument[]): string {
     const interacoesTxt = interactions
-      .map(i => `[${i.createdAt.toISOString()}] ${i.type}: ${i.content}`)
+      .map(i => `[${i.createdAt.toISOString()}] ${(i as any).from || 'SISTEMA'} (${i.type}): ${i.content}`)
       .join('\n');
 
     return `

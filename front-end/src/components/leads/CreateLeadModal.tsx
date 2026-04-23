@@ -1,12 +1,27 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2 } from 'lucide-react';
+import { X } from 'lucide-react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Select } from '../ui/Select';
 import { api } from '@/lib/api';
 import { Lead } from '@/types';
+import { maskPhone } from '@/lib/utils';
+import { useLeadStore } from '@/stores/useLeadStore';
+
+// Zod Schema para Validação (Edge/Client)
+const leadSchema = z.object({
+  name: z.string().min(3, 'O nome deve ter no mínimo 3 caracteres'),
+  phone: z.string().min(14, 'Telefone inválido'),
+  channel: z.enum(['WHATSAPP', 'INSTAGRAM', 'SITE'])
+});
+
+type LeadFormData = z.infer<typeof leadSchema>;
 
 interface CreateLeadModalProps {
   isOpen: boolean;
@@ -15,33 +30,41 @@ interface CreateLeadModalProps {
 }
 
 export function CreateLeadModal({ isOpen, onClose, onLeadCreated }: CreateLeadModalProps) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [channel, setChannel] = useState('WHATSAPP');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const { addLead } = useLeadStore();
+  const [globalError, setGlobalError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !phone) {
-      setError('Nome e telefone são obrigatórios.');
-      return;
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors, isSubmitting }
+  } = useForm<LeadFormData>({
+    resolver: zodResolver(leadSchema),
+    defaultValues: {
+      name: '',
+      phone: '',
+      channel: 'WHATSAPP'
     }
+  });
 
-    setIsSubmitting(true);
-    setError('');
-
+  const onSubmit = async (data: LeadFormData) => {
+    setGlobalError('');
     try {
-      const res = await api.post<Lead>('/leads', { name, phone, channel });
+      const res = await api.post<Lead>('/leads', {
+        name: data.name,
+        phone: data.phone.replace(/\D/g, ''),
+        channel: data.channel
+      });
+
+      // Zustand Store Update
+      addLead(res.data);
       onLeadCreated(res.data);
-      setName('');
-      setPhone('');
-      setChannel('WHATSAPP');
+
+      reset();
       onClose();
-    } catch (err) {
-      setError('Erro ao criar lead. Verifique os dados.');
-    } finally {
-      setIsSubmitting(false);
+    } catch (err: any) {
+      setGlobalError(err.response?.data?.message || 'Erro crítico ao processar Lead. Contate suporte.');
     }
   };
 
@@ -71,41 +94,60 @@ export function CreateLeadModal({ isOpen, onClose, onLeadCreated }: CreateLeadMo
                 </button>
               </div>
 
-              {error && <div className="text-sm text-red-500 bg-red-500/10 p-3 rounded-lg">{error}</div>}
+              {globalError && <div className="text-sm text-red-500 bg-red-500/10 p-3 rounded-lg border border-red-500/20">{globalError}</div>}
 
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <Input
-                  label="Nome Completo"
-                  placeholder="Ex: João Silva"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoFocus
-                />
+              <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+                <div>
+                  <Input
+                    label="Nome Completo"
+                    placeholder="Ex: João Silva"
+                    {...register('name')}
+                    className={errors.name ? 'border-red-500' : ''}
+                  />
+                  {errors.name && <span className="text-xs text-red-500 mt-1 block">{errors.name.message}</span>}
+                </div>
 
                 <div className="flex flex-col gap-4 md:flex-row">
-                  <Input
-                    label="Telefone / WhatsApp"
-                    placeholder="(11) 99999-9999"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
+                  <div className="flex-1">
+                    <Controller
+                      name="phone"
+                      control={control}
+                      render={({ field }) => (
+                        <Input
+                          label="WhatsApp / Telefone"
+                          placeholder="(11) 99999-9999"
+                          {...field}
+                          onChange={(e) => field.onChange(maskPhone(e.target.value))}
+                          className={errors.phone ? 'border-red-500' : ''}
+                        />
+                      )}
+                    />
+                    {errors.phone && <span className="text-xs text-red-500 mt-1 block">{errors.phone.message}</span>}
+                  </div>
 
                   <div className="w-full md:w-1/3">
-                    <Select
-                      label="Canal"
-                      value={channel}
-                      options={[
-                        { label: 'WhatsApp', value: 'WHATSAPP' },
-                        { label: 'Instagram', value: 'INSTAGRAM' },
-                        { label: 'Site', value: 'SITE' },
-                      ]}
-                      onChange={(val) => setChannel(val)}
+                    <Controller
+                      name="channel"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          label="Canal"
+                          value={field.value}
+                          options={[
+                            { label: 'WhatsApp', value: 'WHATSAPP' },
+                            { label: 'Instagram', value: 'INSTAGRAM' },
+                            { label: 'Site', value: 'SITE' },
+                          ]}
+                          onChange={(val) => field.onChange(val)}
+                        />
+                      )}
                     />
+                    {errors.channel && <span className="text-xs text-red-500 mt-1 block">{errors.channel.message}</span>}
                   </div>
                 </div>
 
                 <div className="pt-4 flex justify-end gap-3 border-t border-surface-border mt-2">
-                  <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
+                  <Button type="button" variant="ghost" onClick={() => { reset(); onClose(); }}>Cancelar</Button>
                   <Button type="submit" isLoading={isSubmitting}>
                     Salvar Lead
                   </Button>

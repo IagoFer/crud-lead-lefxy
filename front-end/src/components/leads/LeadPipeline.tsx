@@ -7,9 +7,11 @@ import { api } from '@/lib/api';
 import { Lead, LeadStage, PaginatedResult } from '@/types';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
-import { Search, Loader2, Plus, Phone, MessagesSquare } from 'lucide-react';
+import { Search, Loader2, Plus, Phone, MessagesSquare, CheckCircle2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { CreateLeadModal } from './CreateLeadModal';
+
+import { useLeadStore } from '@/stores/useLeadStore';
 
 // Configura as colunas do Pipeline
 const STAGES: { id: LeadStage; title: string }[] = [
@@ -21,40 +23,46 @@ const STAGES: { id: LeadStage; title: string }[] = [
 ];
 
 export function LeadPipeline() {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const { 
+    leadsByStage, 
+    isInitialLoading, 
+    searchQuery, 
+    setSearchQuery, 
+    fetchInitialStages,
+    fetchNextPage
+  } = useLeadStore();
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const fetchLeads = async (q = '') => {
-    try {
-      setIsLoading(true);
-      // Busca até 50 leads pra renderizar no board de uma vez (simplificação MVP)
-      const res = await api.get<PaginatedResult<Lead>>(`/leads?limit=50&q=${q}`);
-      setLeads(res.data.data);
-    } catch (error) {
-      console.error('Erro ao buscar leads:', error);
-    } finally {
-      setIsLoading(false);
+  const showSuccess = (msg: string) => {
+    setSuccessMessage(msg);
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  // Setup Inicial
+  useEffect(() => {
+    fetchInitialStages('');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Função para checar final de scroll
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>, stage: LeadStage) => {
+    const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+    // Dispara a próxima página quando faltar só 20px pro final da rolagem
+    if (scrollHeight - scrollTop <= clientHeight + 20) {
+      fetchNextPage(stage);
     }
   };
 
-  // Debounce artesanal pra busca
+  // Debounce artesanal pra busca fluida (Impede disparo a cada letra)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      fetchLeads(search);
+      fetchInitialStages(searchQuery);
     }, 500);
     return () => clearTimeout(timeoutId);
-  }, [search]);
+  }, [searchQuery]);
 
-  // Agrupa os leads por estágio memoizado para performance
-  const boards = useMemo(() => {
-    const grouped = STAGES.reduce((acc, stage) => {
-      acc[stage.id] = leads.filter(l => l.stage === stage.id);
-      return acc;
-    }, {} as Record<LeadStage, Lead[]>);
-    return grouped;
-  }, [leads]);
+
 
   return (
     <div className="w-full flex flex-col gap-8">
@@ -64,8 +72,8 @@ export function LeadPipeline() {
           <Input 
             placeholder="Buscar por nome ou telefone..." 
             icon={<Search size={18} />}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
         <Button className="w-full md:w-auto" onClick={() => setIsModalOpen(true)}>
@@ -77,28 +85,59 @@ export function LeadPipeline() {
       <CreateLeadModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        onLeadCreated={(newLead) => setLeads([newLead, ...leads])} 
+        onLeadCreated={() => {
+          showSuccess('Lead criado com sucesso!');
+        }} 
       />
 
+      {/* Notificação de Sucesso */}
+      <AnimatePresence>
+        {successMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, x: 20 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed top-24 right-8 z-[100] flex items-center gap-3 bg-emerald-500 text-white px-6 py-4 rounded-2xl shadow-2xl shadow-emerald-500/20 font-bold border border-white/10 backdrop-blur-md"
+          >
+            <CheckCircle2 className="size-5" />
+            {successMessage}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Board */}
-      <div className="flex gap-6 overflow-x-auto pb-8 snap-x">
+      <div className="flex gap-4 overflow-x-auto pb-4 snap-x custom-scrollbar" style={{ transform: 'rotateX(180deg)' }}>
         {STAGES.map((stage) => (
-          <div key={stage.id} className="min-w-[320px] max-w-[320px] flex-shrink-0 flex flex-col gap-4 snap-start">
-            <div className="flex items-center justify-between px-1">
-              <h3 className="font-semibold text-foreground/90">{stage.title}</h3>
-              <span className="text-xs font-bold text-foreground/50 bg-surface px-2 py-1 rounded-full">
-                {boards[stage.id]?.length || 0}
+          <div 
+            key={stage.id} 
+            className="min-w-[340px] max-w-[340px] flex-shrink-0 flex flex-col bg-surface/30 border border-surface-border/50 rounded-[2rem] p-4 snap-start h-fit shadow-inner"
+            style={{ transform: 'rotateX(180deg)' }}
+          >
+            <div className="flex items-center justify-between px-2 mb-6">
+              <div className="flex items-center gap-3">
+                <div className={`size-2 rounded-full ${
+                  stage.id === 'WON' ? 'bg-emerald-500' : 
+                  stage.id === 'LOST' ? 'bg-red-500' : 
+                  stage.id === 'PROPOSAL' ? 'bg-amber-500' : 'bg-primary'
+                }`} />
+                <h3 className="font-bold text-lg tracking-tight text-foreground/90">{stage.title}</h3>
+              </div>
+              <span className="text-xs font-black text-primary-light bg-primary/10 px-3 py-1 rounded-full border border-primary/10">
+                {leadsByStage[stage.id]?.total || 0}
               </span>
             </div>
 
-            <div className="flex flex-col gap-3 min-h-[200px]">
+            <div 
+              className="flex flex-col gap-3 min-h-[150px] max-h-[650px] overflow-y-auto px-1 pb-4 custom-scrollbar"
+              onScroll={(e) => handleScroll(e, stage.id)}
+            >
               <AnimatePresence mode="popLayout">
-                {isLoading && boards[stage.id].length === 0 && stage.id === 'NEW' ? (
+                {isInitialLoading ? (
                   <div className="w-full flex justify-center py-8">
                     <Loader2 className="animate-spin text-primary opacity-50" />
                   </div>
                 ) : (
-                  boards[stage.id].map((lead) => (
+                  leadsByStage[stage.id].data.map((lead) => (
                     <motion.div
                       layout
                       layoutId={lead._id}
@@ -132,6 +171,12 @@ export function LeadPipeline() {
                       </Link>
                     </motion.div>
                   ))
+                )}
+                
+                {leadsByStage[stage.id].isLoadingMore && (
+                  <div className="w-full flex justify-center py-4">
+                    <Loader2 className="animate-spin text-primary opacity-50" size={20} />
+                  </div>
                 )}
               </AnimatePresence>
             </div>
