@@ -21,8 +21,34 @@ Para habilitar os resumos automáticos:
 1. Acesse o [Google AI Studio](https://aistudio.google.com/).
 2. Faça login com sua conta Google.
 3. Clique em **"Get API key"** no menu lateral.
-4. Crie uma nova chave e copie-a para o seu arquivo `.env` do backend (`GEMINI_API_KEY`).
+4. Crie uma nova chave e copie-a.
 
+#### Configurando as Variáveis de Ambiente
+Copie o arquivo de exemplo e preencha com a sua chave:
+```bash
+cp back-end/.env.example back-end/.env
+```
+
+Abra o `back-end/.env` e substitua `sua_chave_aqui` pela chave obtida no passo anterior:
+```env
+# MongoDB
+MONGO_URI=mongodb://localhost:27017/lefxy
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# App
+PORT=3001
+FOLLOW_UP_DELAY_HOURS=24
+
+# Google Gemini AI
+GEMINI_API_KEY=cole_sua_chave_aqui
+```
+
+> **Nota:** Ao rodar via Docker Compose, as variáveis `MONGO_URI` e `REDIS_HOST` são sobrescritas automaticamente pelo `docker-compose.yml`. O `.env` é necessário apenas para a `GEMINI_API_KEY`.
+
+#### Subindo o Projeto
 Abra o terminal na raiz do projeto e rode:
 ```bash
 docker compose up --build
