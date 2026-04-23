@@ -29,20 +29,25 @@ import { AdminModule } from './modules/admin/admin.module';
 
     MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost:27017/lefxy-crm'),
 
-    BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379', 10),
-      },
+    BullModule.forRootAsync({
+      useFactory: () => ({
+        connection: process.env.REDIS_URL
+          ? { url: process.env.REDIS_URL }
+          : {
+              host: process.env.REDIS_HOST || 'localhost',
+              port: parseInt(process.env.REDIS_PORT || '6379', 10),
+            },
+      }),
     }),
 
     CacheModule.registerAsync({
       isGlobal: true,
       useFactory: () => {
-        const redisHost = process.env.REDIS_HOST || 'localhost';
-        const redisPort = process.env.REDIS_PORT || '6379';
+        const redisUrl =
+          process.env.REDIS_URL ||
+          `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'}`;
         return {
-          stores: [createKeyv(`redis://${redisHost}:${redisPort}`)],
+          stores: [createKeyv(redisUrl)],
           ttl: 60000,
         };
       },
