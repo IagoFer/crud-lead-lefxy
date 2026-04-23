@@ -42,7 +42,8 @@ export class LogsService {
         limit
       };
     } catch (error) {
-      this.logger.error(`Erro ao ler arquivo de log: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Erro ao ler arquivo de log: ${errorMessage}`);
       return { data: [], total: 0 };
     }
   }

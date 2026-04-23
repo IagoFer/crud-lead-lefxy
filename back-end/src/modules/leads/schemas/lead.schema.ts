@@ -20,22 +20,22 @@ export enum Stage {
 @Schema({ timestamps: true })
 export class Lead {
   @Prop({ required: true, trim: true })
-  name: string;
+  name!: string;
 
   @Prop({ required: true, trim: true })
-  phone: string;
+  phone!: string;
 
   @Prop({ required: true, enum: Channel, default: Channel.WHATSAPP })
-  channel: Channel;
+  channel!: Channel;
 
   @Prop({ required: true, enum: Stage, default: Stage.NEW })
-  stage: Stage;
+  stage!: Stage;
 
   @Prop({ type: Date, default: null })
-  deletedAt: Date | null;
+  deletedAt!: Date | null;
 
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt!: Date;
+  updatedAt!: Date;
 }
 
 export const LeadSchema = SchemaFactory.createForClass(Lead);

@@ -11,22 +11,22 @@ export enum FollowUpStatus {
 @Schema({ timestamps: true })
 export class FollowUp {
   @Prop({ type: Types.ObjectId, ref: 'Lead', required: true })
-  leadId: Types.ObjectId;
+  leadId!: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'Interaction', required: true })
-  interactionId: Types.ObjectId;
+  interactionId!: Types.ObjectId;
 
   @Prop({ required: true, enum: FollowUpStatus, default: FollowUpStatus.PENDING })
-  status: FollowUpStatus;
+  status!: FollowUpStatus;
 
   @Prop({ required: true })
-  dueAt: Date;
+  dueAt!: Date;
 
   @Prop({ type: Date })
   completedAt?: Date;
 
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt!: Date;
+  updatedAt!: Date;
 }
 
 export const FollowUpSchema = SchemaFactory.createForClass(FollowUp);

@@ -6,3 +6,4 @@ dist/
 coverage/
 .next/
 back-end/logs/
+*.tsbuildinfo

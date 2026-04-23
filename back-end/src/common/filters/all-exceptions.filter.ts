@@ -27,14 +27,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? exception.getResponse() 
         : (exception as Error).message;
 
-    // Log estruturado para o Winston capturar
-    this.logger.error({
+    // Log estruturado legível
+    const logData = {
       status,
       path: request.url,
       method: request.method,
       message: message,
       timestamp: new Date().toISOString(),
-    });
+    };
+    
+    this.logger.error(JSON.stringify(logData, null, 2));
 
     response.status(status).json({
       statusCode: status,

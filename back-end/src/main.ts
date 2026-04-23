@@ -62,8 +62,8 @@ async function bootstrap() {
 
   // Swagger Configuration
   const config = new DocumentBuilder()
-    .setTitle('LEFXY CRM API')
-    .setDescription('API documentation for the LEFXY Mini Legal CRM')
+    .setTitle('LEFXY - CRM Jurídico')
+    .setDescription('API robusta para gestão de leads jurídicos, integrada com Google Gemini IA e automação de follow-ups.')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

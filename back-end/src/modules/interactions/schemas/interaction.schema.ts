@@ -12,19 +12,19 @@ export enum InteractionType {
 @Schema({ timestamps: true })
 export class Interaction {
   @Prop({ type: Types.ObjectId, ref: 'Lead', required: true, index: true })
-  leadId: Types.ObjectId;
+  leadId!: Types.ObjectId;
 
   @Prop({ required: true, enum: InteractionType })
-  type: InteractionType;
+  type!: InteractionType;
 
   @Prop({ required: true, enum: ['LEAD', 'USER'], default: 'USER' })
-  from: string;
+  from!: string;
 
   @Prop({ required: true, trim: true })
-  content: string;
+  content!: string;
 
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt!: Date;
+  updatedAt!: Date;
 }
 
 export const InteractionSchema = SchemaFactory.createForClass(Interaction);
